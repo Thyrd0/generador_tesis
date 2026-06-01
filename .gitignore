@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+ENV/
+env/
+.env
+.venv
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Project specific generated files
+backend/generated_docs/*.docx
+backend/generated_docs/*.pdf
+backend/generated_docs/*.html
+!backend/generated_docs/.gitkeep
