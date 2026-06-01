@@ -1,5 +1,5 @@
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, cm
 from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER, TA_LEFT
@@ -88,7 +88,6 @@ class DocumentGenerator:
             os.makedirs(self.output_dir)
 
     def generar_pdf(self, contenido, request):
-        # Aseguramos que la carpeta exista dentro de backend si aplica
         filename = f"{self.output_dir}/tesis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         
         # Configuración del documento con márgenes exactos: izquierdo 3 cm, el resto 2.5 cm
@@ -112,6 +111,15 @@ class DocumentGenerator:
             alignment=TA_JUSTIFY,
             fontSize=12,
             fontName=font_family,
+            leading=18
+        ))
+        
+        styles.add(ParagraphStyle(
+            name='JustifyBold',
+            parent=styles['Normal'],
+            alignment=TA_JUSTIFY,
+            fontSize=12,
+            fontName=font_family_bold,
             leading=18
         ))
         
@@ -145,15 +153,37 @@ class DocumentGenerator:
         story = []
         
         # 1. Carátula (Página 1)
-        story.append(Spacer(1, 0.5*inch))
+        story.append(Spacer(1, 0.4*inch))
         story.append(Paragraph("UNIVERSIDAD NACIONAL DE TRUJILLO", styles['CenterBold']))
         story.append(Paragraph("FACULTAD DE INGENIERÍA", styles['Center']))
         story.append(Paragraph("Programa de Estudios de Ingeniería de Sistemas", styles['Center']))
-        story.append(Spacer(1, 1.2*inch))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Inserción de Logotipo
+        logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "logo", "images.png"))
+        if os.path.exists(logo_path):
+            try:
+                logo_img = Image(logo_path, width=1.5*inch, height=1.5*inch)
+                logo_table = Table([[logo_img]], colWidths=[6.2*inch])
+                logo_table.setStyle(TableStyle([
+                    ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+                    ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                    ('LEFTPADDING', (0,0), (-1,-1), 0),
+                    ('RIGHTPADDING', (0,0), (-1,-1), 0),
+                    ('TOPPADDING', (0,0), (-1,-1), 0),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+                ]))
+                story.append(logo_table)
+                story.append(Spacer(1, 0.3*inch))
+            except Exception as e:
+                print(f"Error insertando logotipo en PDF: {e}")
+                story.append(Spacer(1, 1.2*inch))
+        else:
+            story.append(Spacer(1, 1.2*inch))
         
         # Título en negrita y centrado
         story.append(Paragraph(contenido['caratula']['titulo'].upper(), styles['Title']))
-        story.append(Spacer(1, 1.2*inch))
+        story.append(Spacer(1, 0.8*inch))
         
         # Autores y asesor
         autores_texto = " y ".join(contenido['caratula']['autores'])
@@ -162,7 +192,7 @@ class DocumentGenerator:
         story.append(Paragraph(f"<b>ASESOR:</b><br/>{contenido['caratula']['asesor'].upper()}", styles['Center']))
         story.append(Spacer(1, 0.3*inch))
         story.append(Paragraph(f"<b>LÍNEA DE INVESTIGACIÓN:</b><br/>{contenido['caratula']['linea_investigacion'].upper()}", styles['Center']))
-        story.append(Spacer(1, 1*inch))
+        story.append(Spacer(1, 0.6*inch))
         story.append(Paragraph(f"{contenido['caratula']['ciudad'].upper()} - {contenido['caratula']['año']}", styles['Center']))
         
         story.append(PageBreak())
@@ -222,7 +252,7 @@ class DocumentGenerator:
             [Paragraph("<b>ÍNDICE GENERAL</b>", style_idx), Paragraph(". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .", style_idx), Paragraph("iii", style_idx)],
             [Paragraph("<b>CAPÍTULO I: INTRODUCCIÓN</b>", style_idx), Paragraph(". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .", style_idx), Paragraph("1", style_idx)],
             [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;1.1. Realidad Problemática", style_idx), Paragraph(". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .", style_idx), Paragraph("1", style_idx)],
-            [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;1.2. Antecedentes", style_idx), Paragraph(". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .", style_idx), Paragraph("3", style_idx)],
+            [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;1.2. Antecedentes de la Investigación", style_idx), Paragraph(". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .", style_idx), Paragraph("3", style_idx)],
             [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;1.3. Marco Teórico", style_idx), Paragraph(". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .", style_idx), Paragraph("5", style_idx)],
             [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;1.4. Justificación de la Investigación", style_idx), Paragraph(". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .", style_idx), Paragraph("8", style_idx)],
             [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;1.5. Formulación del Problema", style_idx), Paragraph(". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .", style_idx), Paragraph("9", style_idx)],
@@ -252,8 +282,76 @@ class DocumentGenerator:
         story.append(Paragraph("CAPÍTULO I: INTRODUCCIÓN", styles['CenterBold']))
         story.append(Spacer(1, 0.3*inch))
         
-        # Dividir por párrafos para aplicar justificación e interlineado 1.5 correctamente
-        for parag in contenido['introduccion'].split("\n\n"):
+        intro_data = contenido['introduccion']
+        
+        # 1.1. Realidad Problemática
+        story.append(Paragraph("<b>1.1. Realidad Problemática</b>", styles['JustifyBold']))
+        story.append(Spacer(1, 0.1*inch))
+        for parag in intro_data['realidad'].split("\n\n"):
+            if parag.strip():
+                story.append(Paragraph(parag.strip(), styles['Justify']))
+                story.append(Spacer(1, 0.15*inch))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # 1.2. Antecedentes
+        story.append(Paragraph("<b>1.2. Antecedentes de la Investigación</b>", styles['JustifyBold']))
+        story.append(Spacer(1, 0.1*inch))
+        for parag in intro_data['antecedentes'].split("\n\n"):
+            if parag.strip():
+                story.append(Paragraph(parag.strip(), styles['Justify']))
+                story.append(Spacer(1, 0.15*inch))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # 1.3. Marco Teórico
+        story.append(Paragraph("<b>1.3. Marco Teórico</b>", styles['JustifyBold']))
+        story.append(Spacer(1, 0.1*inch))
+        for parag in intro_data['marco_teorico'].split("\n\n"):
+            if parag.strip():
+                story.append(Paragraph(parag.strip(), styles['Justify']))
+                story.append(Spacer(1, 0.15*inch))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # 1.4. Justificación de la Investigación
+        story.append(Paragraph("<b>1.4. Justificación de la Investigación</b>", styles['JustifyBold']))
+        story.append(Spacer(1, 0.1*inch))
+        for parag in intro_data['justificacion'].split("\n\n"):
+            if parag.strip():
+                story.append(Paragraph(parag.strip(), styles['Justify']))
+                story.append(Spacer(1, 0.15*inch))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # 1.5. Formulación del Problema
+        story.append(Paragraph("<b>1.5. Formulación del Problema</b>", styles['JustifyBold']))
+        story.append(Spacer(1, 0.1*inch))
+        story.append(Paragraph(intro_data['problema'], styles['Justify']))
+        story.append(Spacer(1, 0.3*inch))
+        
+        # 1.6. Hipótesis de la Investigación
+        story.append(Paragraph("<b>1.6. Hipótesis de la Investigación</b>", styles['JustifyBold']))
+        story.append(Spacer(1, 0.1*inch))
+        story.append(Paragraph(intro_data['hipotesis'], styles['Justify']))
+        story.append(Spacer(1, 0.3*inch))
+        
+        # 1.7. Objetivos de la Investigación
+        story.append(Paragraph("<b>1.7. Objetivos de la Investigación</b>", styles['JustifyBold']))
+        story.append(Spacer(1, 0.1*inch))
+        story.append(Paragraph("<b>1.7.1. Objetivo General</b>", styles['JustifyBold']))
+        story.append(Spacer(1, 0.05*inch))
+        story.append(Paragraph(intro_data['objetivos']['general'], styles['Justify']))
+        story.append(Spacer(1, 0.15*inch))
+        
+        story.append(Paragraph("<b>1.7.2. Objetivos Específicos</b>", styles['JustifyBold']))
+        story.append(Spacer(1, 0.05*inch))
+        for obj in intro_data['objetivos']['especificos']:
+            if obj.strip():
+                story.append(Paragraph(f"- {obj.strip()}", styles['Justify']))
+                story.append(Spacer(1, 0.08*inch))
+        story.append(Spacer(1, 0.3*inch))
+        
+        # 1.8. Limitaciones
+        story.append(Paragraph("<b>1.8. Limitaciones del Estudio</b>", styles['JustifyBold']))
+        story.append(Spacer(1, 0.1*inch))
+        for parag in intro_data['limitaciones'].split("\n\n"):
             if parag.strip():
                 story.append(Paragraph(parag.strip(), styles['Justify']))
                 story.append(Spacer(1, 0.15*inch))
@@ -264,7 +362,6 @@ class DocumentGenerator:
         story.append(Paragraph("REFERENCIAS BIBLIOGRÁFICAS", styles['CenterBold']))
         story.append(Spacer(1, 0.3*inch))
         
-        # Estilo APA con sangría francesa (de ser posible, o justificado con espacio)
         style_ref = ParagraphStyle(
             name='APAReference',
             parent=styles['Justify'],
@@ -288,7 +385,6 @@ class DocumentGenerator:
         story.append(Paragraph("<b>ANEXO 1: ÁRBOL DE PROBLEMAS</b>", styles['Justify']))
         story.append(Spacer(1, 0.15*inch))
         
-        # Estilo para los diagramas y textos de anexos (monospaciado o Arial chico)
         style_anexo_text = ParagraphStyle(
             name='AnexoText',
             parent=styles['Normal'],
@@ -371,24 +467,41 @@ class DocumentGenerator:
         run = title_p.add_run("FACULTAD DE INGENIERÍA\n")
         run.font.size = Pt(12)
         
-        run = title_p.add_run("Programa de Estudios de Ingeniería de Sistemas\n\n\n\n")
+        run = title_p.add_run("Programa de Estudios de Ingeniería de Sistemas\n\n")
         run.font.size = Pt(12)
         
-        run = title_p.add_run(contenido['caratula']['titulo'].upper() + "\n\n\n\n\n")
+        # Inserción de logotipo en Word
+        logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "logo", "images.png"))
+        if os.path.exists(logo_path):
+            try:
+                p_img = doc.add_paragraph()
+                p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p_img_run = p_img.add_run()
+                p_img_run.add_picture(logo_path, width=Inches(1.5))
+                doc.add_paragraph()
+            except Exception as e:
+                print(f"Error insertando logo en DOCX: {e}")
+                title_p.add_run("\n\n\n")
+        else:
+            title_p.add_run("\n\n\n")
+            
+        title_p_after = doc.add_paragraph()
+        title_p_after.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = title_p_after.add_run(contenido['caratula']['titulo'].upper() + "\n\n\n")
         run.bold = True
         run.font.size = Pt(16)
         
         autores_texto = " y ".join(contenido['caratula']['autores'])
-        run = title_p.add_run(f"AUTORES:\n{autores_texto.upper()}\n\n")
+        run = title_p_after.add_run(f"AUTORES:\n{autores_texto.upper()}\n\n")
         run.font.size = Pt(12)
         
-        run = title_p.add_run(f"ASESOR:\n{contenido['caratula']['asesor'].upper()}\n\n")
+        run = title_p_after.add_run(f"ASESOR:\n{contenido['caratula']['asesor'].upper()}\n\n")
         run.font.size = Pt(12)
         
-        run = title_p.add_run(f"LÍNEA DE INVESTIGACIÓN:\n{contenido['caratula']['linea_investigacion'].upper()}\n\n\n\n")
+        run = title_p_after.add_run(f"LÍNEA DE INVESTIGACIÓN:\n{contenido['caratula']['linea_investigacion'].upper()}\n\n\n")
         run.font.size = Pt(12)
         
-        run = title_p.add_run(f"{contenido['caratula']['ciudad'].upper()} - {contenido['caratula']['año']}")
+        run = title_p_after.add_run(f"{contenido['caratula']['ciudad'].upper()} - {contenido['caratula']['año']}")
         run.font.size = Pt(12)
         
         doc.add_page_break()
@@ -426,7 +539,7 @@ class DocumentGenerator:
             ("ÍNDICE GENERAL", "iii"),
             ("CAPÍTULO I: INTRODUCCIÓN", "1"),
             ("    1.1. Realidad Problemática", "1"),
-            ("    1.2. Antecedentes", "3"),
+            ("    1.2. Antecedentes de la Investigación", "3"),
             ("    1.3. Marco Teórico", "5"),
             ("    1.4. Justificación de la Investigación", "8"),
             ("    1.5. Formulación del Problema", "9"),
@@ -458,7 +571,63 @@ class DocumentGenerator:
         run.bold = True
         run.font.size = Pt(14)
         
-        for parag in contenido['introduccion'].split("\n\n"):
+        intro_data = contenido['introduccion']
+        
+        # 1.1. Realidad
+        p = doc.add_paragraph()
+        p.add_run("1.1. Realidad Problemática").bold = True
+        for parag in intro_data['realidad'].split("\n\n"):
+            if parag.strip():
+                doc.add_paragraph(parag.strip())
+                
+        # 1.2. Antecedentes
+        p = doc.add_paragraph()
+        p.add_run("\n1.2. Antecedentes de la Investigación").bold = True
+        for parag in intro_data['antecedentes'].split("\n\n"):
+            if parag.strip():
+                doc.add_paragraph(parag.strip())
+                
+        # 1.3. Marco Teórico
+        p = doc.add_paragraph()
+        p.add_run("\n1.3. Marco Teórico").bold = True
+        for parag in intro_data['marco_teorico'].split("\n\n"):
+            if parag.strip():
+                doc.add_paragraph(parag.strip())
+                
+        # 1.4. Justificación
+        p = doc.add_paragraph()
+        p.add_run("\n1.4. Justificación de la Investigación").bold = True
+        for parag in intro_data['justificacion'].split("\n\n"):
+            if parag.strip():
+                doc.add_paragraph(parag.strip())
+                
+        # 1.5. Problema
+        p = doc.add_paragraph()
+        p.add_run("\n1.5. Formulación del Problema").bold = True
+        doc.add_paragraph(intro_data['problema'])
+        
+        # 1.6. Hipótesis
+        p = doc.add_paragraph()
+        p.add_run("\n1.6. Hipótesis de la Investigación").bold = True
+        doc.add_paragraph(intro_data['hipotesis'])
+        
+        # 1.7. Objetivos
+        p = doc.add_paragraph()
+        p.add_run("\n1.7. Objetivos de la Investigación").bold = True
+        p_gen = doc.add_paragraph()
+        p_gen.add_run("1.7.1. Objetivo General").bold = True
+        doc.add_paragraph(intro_data['objetivos']['general'])
+        
+        p_esp = doc.add_paragraph()
+        p_esp.add_run("1.7.2. Objetivos Específicos").bold = True
+        for obj in intro_data['objetivos']['especificos']:
+            if obj.strip():
+                doc.add_paragraph(f"- {obj.strip()}")
+                
+        # 1.8. Limitaciones
+        p = doc.add_paragraph()
+        p.add_run("\n1.8. Limitaciones del Estudio").bold = True
+        for parag in intro_data['limitaciones'].split("\n\n"):
             if parag.strip():
                 doc.add_paragraph(parag.strip())
                 

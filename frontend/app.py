@@ -94,21 +94,12 @@ def main():
     with st.sidebar:
         st.header("📋 Instrucciones")
         st.markdown("""
-        1. Complete todos los campos del formulario
-        2. Ingrese el tema de su tesis
-        3. Provea una API Key de Gemini para el modo de generación real (+10 páginas)
-        4. Haga clic en **Generar Proyecto de Tesis**
-        5. Visualice la previsualización y descargue los archivos
+        1. Complete todos los campos del formulario.
+        2. Ingrese el tema de su tesis.
+        3. El sistema cargará la Gemini API Key automáticamente desde el archivo `.env` del servidor para la generación real de más de 10 páginas.
+        4. Haga clic en **Generar Proyecto de Tesis**.
+        5. Visualice la previsualización estructurada y descargue los archivos.
         """)
-        st.markdown("---")
-        
-        st.header("🔑 Configuración IA")
-        gemini_api_key = st.text_input(
-            "Gemini API Key",
-            type="password",
-            placeholder="AIzaSy...",
-            help="Ingrese su clave de Google Gemini. Si se deja en blanco, se usará el generador simulado con datos predefinidos."
-        )
         
         st.markdown("---")
         st.header("📌 Formato del Esquema")
@@ -179,7 +170,7 @@ def main():
                     "ciudad": ciudad,
                     "año": año,
                     "jurados": None,
-                    "gemini_api_key": gemini_api_key if gemini_api_key else None
+                    "gemini_api_key": None  # La API key se lee en el backend del archivo .env
                 }
                 
                 try:
@@ -220,11 +211,7 @@ def main():
                                 st.session_state["docx_filename"] = os.path.basename(docx_path)
                                 
                         st.success("✅ ¡Proyecto de tesis e informes complementarios generados exitosamente!")
-                        
-                        if gemini_api_key:
-                            st.info("💡 Modo de Generación Real de Alta Capacidad activo: Se ha generado un documento denso de más de 10 páginas utilizando la API de Gemini.")
-                        else:
-                            st.warning("⚠️ Modo Simulado activo: No se ingresó API Key, por lo que se usaron plantillas predefinidas. Ingrese una Gemini API Key en la barra lateral para un informe dinámico de alta calidad.")
+                        st.info("💡 Modo de Generación Real de Alta Capacidad activo: Se ha generado un documento denso utilizando la API de Gemini configurada desde el servidor.")
                             
                     else:
                         st.error(f"Error al generar el proyecto: Código de estado {response.status_code}. Detalles: {response.text}")
@@ -258,8 +245,34 @@ def main():
             """)
             
             st.subheader("Capítulo I: Introducción")
-            with st.expander("Ver introducción completa generada en prosa (márgenes y fuente formateados en las descargas)"):
-                st.write(contenido['introduccion'])
+            intro_data = contenido['introduccion']
+            
+            with st.expander("1.1. Realidad Problemática"):
+                st.write(intro_data['realidad'])
+                
+            with st.expander("1.2. Antecedentes de la Investigación"):
+                st.write(intro_data['antecedentes'])
+                
+            with st.expander("1.3. Marco Teórico (Metodologías)"):
+                st.write(intro_data['marco_teorico'])
+                
+            with st.expander("1.4. Justificación de la Investigación"):
+                st.write(intro_data['justificacion'])
+                
+            with st.expander("1.5. Formulación del Problema"):
+                st.markdown(f"**Problema:** {intro_data['problema']}")
+                
+            with st.expander("1.6. Hipótesis de la Investigación"):
+                st.markdown(f"**Hipótesis:** {intro_data['hipotesis']}")
+                
+            with st.expander("1.7. Objetivos de la Investigación"):
+                st.markdown(f"**Objetivo General:** {intro_data['objetivos']['general']}")
+                st.markdown("**Objetivos Específicos:**")
+                for obj in intro_data['objetivos']['especificos']:
+                    st.write(f"- {obj}")
+                    
+            with st.expander("1.8. Limitaciones del Estudio"):
+                st.write(intro_data['limitaciones'])
         
         with tab2:
             st.subheader("Referencias Bibliográficas (Estilo APA v7)")
@@ -284,7 +297,7 @@ def main():
             - **Vocal (Asesor):** {jurado['vocal']['grado']} {jurado['vocal']['nombre']}
             """)
             
-            st.caption("Nota: Las firmas se renderizan elegantemente en los documentos descargados.")
+            st.caption("Nota: Las firmas y el logotipo oficial de la universidad se renderizan en los documentos descargados.")
         
         # Botones de descarga persistentes
         st.markdown("---")

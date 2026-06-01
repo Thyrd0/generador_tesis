@@ -104,7 +104,7 @@ Además, se consideran conceptos fundamentales como arquitectura de software, ba
         # Justificación
         justificacion = f"""La presente investigación se justifica desde tres perspectivas:
 
-Justificación Teórica: Esta investigación contribuirá al conocimiento existente sobre {tema} mediante la aplicación y adaptación de metodologías reconocidas internacionalmente, generando nuevo conocimiento aplicable al contexto local.
+Justificación Teórica: Esta investigación contribuirá al conocimiento científico sobre {tema} mediante la aplicación y adaptación de metodologías reconocidas internacionalmente, generando nuevo conocimiento aplicable al contexto local.
 
 Justificación Práctica: Los resultados permitirán a las organizaciones de {request.ciudad} implementar soluciones efectivas para {tema}, mejorando su eficiencia operativa y competitividad en el mercado.
 
@@ -138,27 +138,16 @@ Limitación Temporal: El desarrollo e implementación de la solución se realiza
 
 Otras limitaciones incluyen la disponibilidad de recursos tecnológicos, la curva de aprendizaje de los usuarios, y posibles resistencias al cambio durante la implementación."""
         
-        # Combinar todo en prosa sin subtítulos
-        introduccion_completa = f"""{realidad}
-
-{antecedentes}
-
-{marco_teorico}
-
-{justificacion}
-
-Problema: {problema}
-
-Hipótesis: {hipotesis}
-
-Objetivo General: {objetivos['general']}
-
-Objetivos Específicos:
-{chr(10).join([f'- {obj}' for obj in objetivos['especificos']])}
-
-Limitaciones del Estudio: {limitaciones}"""
-        
-        return introduccion_completa
+        return {
+            "realidad": realidad,
+            "antecedentes": antecedentes,
+            "marco_teorico": marco_teorico,
+            "justificacion": justificacion,
+            "problema": problema,
+            "hipotesis": hipotesis,
+            "objetivos": objetivos,
+            "limitaciones": limitaciones
+        }
 
     def _generar_referencias(self, tema):
         referencias = []
@@ -279,18 +268,68 @@ La implementación de metodologías estandarizadas (medio) junto con la automati
         formulaciones = self._generar_formulaciones_gemini(tema, ciudad)
         limitaciones = self._generar_limitaciones_gemini(tema, ciudad)
 
-        # Unir toda la introducción estructuradamente en prosa académica
-        introduccion = f"""{realidad}
+        # Parsear las formulaciones de Gemini en problema, hipótesis, y objetivos
+        problema = ""
+        hipotesis = ""
+        objetivo_general = ""
+        objetivos_especificos = []
 
-{antecedentes}
+        try:
+            for line in formulaciones.split("\n"):
+                line_strip = line.strip()
+                if not line_strip:
+                    continue
+                if line_strip.lower().startswith("problema:"):
+                    problema = line_strip[len("problema:"):].strip()
+                elif line_strip.lower().startswith("hipótesis:"):
+                    hipotesis = line_strip[len("hipótesis:"):].strip()
+                elif line_strip.lower().startswith("objetivo general:"):
+                    objetivo_general = line_strip[len("objetivo general:"):].strip()
+                elif line_strip.startswith(("-", "*", "•")) or (line_strip and line_strip[0].isdigit()):
+                    cleaned_line = line_strip
+                    if cleaned_line.startswith(("-", "*", "•")):
+                        cleaned_line = cleaned_line[1:].strip()
+                    elif cleaned_line[0].isdigit():
+                        idx = 0
+                        while idx < len(cleaned_line) and cleaned_line[idx].isdigit():
+                            idx += 1
+                        if idx < len(cleaned_line) and cleaned_line[idx] in [".", ")", "-", " "]:
+                            cleaned_line = cleaned_line[idx+1:].strip()
+                    if cleaned_line and len(cleaned_line) > 5:
+                        objetivos_especificos.append(cleaned_line)
+        except Exception as e:
+            print(f"Error parseando formulaciones de Gemini: {e}")
 
-{marco}
+        # Fallbacks si falla el parseo
+        if not problema:
+            problema = f"¿De qué manera la implementación de una solución tecnológica basada en metodologías ágiles y buenas prácticas de ingeniería de software puede mejorar los procesos relacionados con {tema} en las organizaciones de {ciudad}?"
+        if not hipotesis:
+            hipotesis = f"La implementación de una solución tecnológica basada en metodologías ágiles (Scrum, DevOps e ITIL) mejorará significativamente los procesos relacionados con {tema}, evidenciándose en indicadores de eficiencia, calidad y satisfacción de los usuarios finales."
+        if not objetivo_general:
+            objetivo_general = f"Desarrollar e implementar una solución tecnológica basada en metodologías ágiles para mejorar los procesos relacionados con {tema} en las organizaciones de {ciudad}."
+        if len(objetivos_especificos) < 3:
+            objetivos_especificos = [
+                f"Analizar el estado actual de los procesos relacionados con {tema} en organizaciones de {ciudad}.",
+                "Seleccionar y adaptar las metodologías más adecuadas (Scrum, DevOps, ITIL) para el desarrollo de la solución.",
+                f"Diseñar la arquitectura de la solución tecnológica para {tema} considerando los requisitos funcionales y no funcionales.",
+                f"Implementar un prototipo funcional que aborde los principales problemas identificados en {tema}.",
+                f"Evaluar el impacto de la solución implementada mediante indicadores clave de rendimiento.",
+                "Documentar las lecciones aprendidas y mejores prácticas para futuras implementaciones."
+            ]
 
-{justificacion}
-
-{formulaciones}
-
-{limitaciones}"""
+        introduccion = {
+            "realidad": realidad,
+            "antecedentes": antecedentes,
+            "marco_teorico": marco,
+            "justificacion": justificacion,
+            "problema": problema,
+            "hipotesis": hipotesis,
+            "objetivos": {
+                "general": objetivo_general,
+                "especificos": objetivos_especificos
+            },
+            "limitaciones": limitaciones
+        }
 
         # 2. Generar referencias en formato APA v7 (exactamente 30)
         referencias_texto = self._generar_referencias_gemini(tema)
@@ -343,20 +382,24 @@ La implementación de metodologías estandarizadas (medio) junto con la automati
 
     def _call_gemini(self, prompt: str, system_instruction: str = None) -> str:
         import google.generativeai as genai
-        # Intentamos usar gemini-2.5-flash primero; fallback a gemini-1.5-flash
-        models_to_try = ["gemini-2.5-flash", "gemini-1.5-flash"]
+        # Intentamos una lista de modelos para asegurar compatibilidad en diversos entornos y SDKs
+        models_to_try = ["gemini-pro", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.5-flash"]
         last_error = None
         for model_name in models_to_try:
             try:
-                # El parámetro system_instruction es soportado por los modelos más recientes
-                model = genai.GenerativeModel(
-                    model_name=model_name,
-                    system_instruction=system_instruction or "Eres un metodólogo experto en proyectos de tesis e Ingeniería de Sistemas, y dominas las normas APA v7."
-                )
+                # El modelo heredado 'gemini-pro' no soporta el parámetro system_instruction
+                if model_name == "gemini-pro":
+                    model = genai.GenerativeModel(model_name=model_name)
+                else:
+                    model = genai.GenerativeModel(
+                        model_name=model_name,
+                        system_instruction=system_instruction or "Eres un metodólogo experto en proyectos de tesis e Ingeniería de Sistemas, y dominas las normas APA v7."
+                    )
                 response = model.generate_content(prompt)
                 if response and response.text:
                     return response.text.strip()
             except Exception as e:
+                print(f"Error con modelo {model_name}: {e}")
                 last_error = e
                 continue
         raise last_error or RuntimeError("No se pudo comunicar con ningún modelo de Gemini")
